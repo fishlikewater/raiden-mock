@@ -1,0 +1,39 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.github.fishlikewater</groupId>
+    <artifactId>raiden-mock</artifactId>
+    <version>${revision}</version>
+  </parent>
+
+  <artifactId>raiden-mock-service</artifactId>
+  <name>raiden-mock-service</name>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.github.fishlikewater</groupId>
+      <artifactId>raiden-mock-core</artifactId>
+      <version>${revision}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.github.fishlikewater</groupId>
+      <artifactId>raiden-config</artifactId>
+      <version>${raiden.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.github.fishlikewater</groupId>
+      <artifactId>raiden-generate</artifactId>
+      <version>${raiden.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.github.fishlikewater</groupId>
+      <artifactId>raiden-json-spring-boot-starter</artifactId>
+      <version>${raiden.version}</version>
+    </dependency>
+  </dependencies>
+</project>
