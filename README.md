@@ -39,7 +39,7 @@ response_body = {
     "date": "1991-06-05",
     "random": "我是随机数:qBiR0Nxk:19840429",
     "datetime": "20020109091011",
-    "address": "香港特别行政区油尖旺区null",
+    "address": "香港特别行政区油尖旺区",
     "phone": "17886195548",
     "idCard": "540227201307305225",
     "name": "周清",
