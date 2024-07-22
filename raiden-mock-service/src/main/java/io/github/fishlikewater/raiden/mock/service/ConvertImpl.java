@@ -1,0 +1,60 @@
+package io.github.fishlikewater.raiden.mock.service;
+
+import io.github.fishlikewater.raiden.core.ObjectUtils;
+import io.github.fishlikewater.raiden.mock.core.enums.DataTypeEnum;
+import io.github.fishlikewater.raiden.mock.service.generate.Generate;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * {@code ConvertImpl}
+ *
+ * @author zhangxiang
+ * @version 1.0.0
+ * @since 2024/07/22
+ */
+@Service
+public class ConvertImpl implements Convert {
+
+    private static final Pattern PATTERN = Pattern.compile("(@\\w+@(\\{.*?})?)");
+    private final List<Generate> generates;
+
+    public ConvertImpl(List<Generate> generates) {
+        this.generates = generates;
+    }
+
+    @Override
+    public Object convert(String expression) {
+        Matcher matcher = PATTERN.matcher(expression);
+        while (matcher.find()) {
+            String express = matcher.group();
+            DataTypeEnum dataType = this.getDataType(express);
+            if (ObjectUtils.isNullOrEmpty(dataType)) {
+                return expression;
+            }
+            for (Generate generate : generates) {
+                if (!generate.support(dataType)) {
+                    continue;
+                }
+                Object generated = generate.generate(expression);
+                if (ObjectUtils.equals(expression, express)) {
+                    return generated;
+                }
+                expression = expression.replace(express, generated.toString());
+                break;
+            }
+        }
+        return expression;
+    }
+
+    public static void main(String[] args) {
+        String string = "@name@{20,30}";
+        Matcher matcher = PATTERN.matcher(string);
+        while (matcher.find()) {
+            System.out.println(matcher.group());
+        }
+    }
+}

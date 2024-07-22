@@ -5,11 +5,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.fishlikewater.raiden.core.Assert;
 import io.github.fishlikewater.raiden.core.ObjectUtils;
-import io.github.fishlikewater.raiden.core.RandomUtils;
 import io.github.fishlikewater.raiden.core.StringUtils;
 import io.github.fishlikewater.raiden.core.constant.CommonConstants;
 import io.github.fishlikewater.raiden.core.model.Result;
-import io.github.fishlikewater.raiden.generate.GenerateUtils;
+import io.github.fishlikewater.raiden.mock.core.constants.MockConstants;
 import io.github.fishlikewater.raiden.mock.core.enums.DataTypeEnum;
 import io.github.fishlikewater.raiden.mock.core.model.RequestModel;
 import io.github.fishlikewater.raiden.mock.service.cache.MockInterfaceCache;
@@ -26,7 +25,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -45,12 +43,14 @@ public class MockServiceImpl implements MockService {
     private final Pattern pathPattern = Pattern.compile("\\{(\\w+)}");
 
     private final ObjectMapper objectMapper;
+    private final Convert convert;
 
     private final MockInterfaceCache mockInterface;
 
-    public MockServiceImpl(ObjectMapper objectMapper, MockInterfaceCache mockInterfaceCache) {
+    public MockServiceImpl(ObjectMapper objectMapper, MockInterfaceCache mockInterfaceCache, Convert convert) {
         this.objectMapper = objectMapper;
         this.mockInterface = mockInterfaceCache;
+        this.convert = convert;
     }
 
     @Override
@@ -68,31 +68,31 @@ public class MockServiceImpl implements MockService {
             this.addHeaders(response, requestModel.getResponseHeaders());
             Map<String, Object> map = this.resolveResponseBody(request, response, requestModel);
             if (ObjectUtils.isNullOrEmpty(warpperMap)) {
-                return Result.of("success", responseCode, map);
+                return Result.of(MockConstants.MOCK_SUCCESS, responseCode, map);
             }
             return this.wrapperResult(warpperMap, responseCode, map);
         }
-        return Result.of("failed", "00");
+        return Result.of(MockConstants.MOCK_FAILED, MockConstants.MOCK_DEFAULT_CODE);
     }
 
     private Object wrapperResult(Map<String, Object> warpperMap, String responseCode, Map<String, Object> map) {
         Map<String, Object> returnMap = new HashMap<>(8);
         for (Map.Entry<String, Object> entry : warpperMap.entrySet()) {
-            if (entry.getKey().equals("result")) {
-                returnMap.put((String) warpperMap.get("result"), map);
+            if (entry.getKey().equals(MockConstants.MOCK_RESULT)) {
+                returnMap.put((String) warpperMap.get(MockConstants.MOCK_RESULT), map);
                 continue;
             }
-            if (entry.getKey().equals("code")) {
-                returnMap.put((String) warpperMap.get("code"), responseCode);
+            if (entry.getKey().equals(MockConstants.MOCK_CODE)) {
+                returnMap.put((String) warpperMap.get(MockConstants.MOCK_CODE), responseCode);
                 continue;
             }
-            if (entry.getKey().equals("message")) {
-                returnMap.put((String) warpperMap.get("message"), "success");
+            if (entry.getKey().equals(MockConstants.MOCK_MESSAGE)) {
+                returnMap.put((String) warpperMap.get(MockConstants.MOCK_MESSAGE), MockConstants.MOCK_SUCCESS);
                 continue;
             }
             String value = (String) entry.getValue();
-            DataTypeEnum dataType = this.getDataType(value);
-            returnMap.put(entry.getKey(), this.tryGenerate(dataType));
+            Object object = this.convert.convert(value);
+            returnMap.put(entry.getKey(), object);
         }
 
         return returnMap;
@@ -100,66 +100,42 @@ public class MockServiceImpl implements MockService {
 
     private Map<String, Object> tryAcquireResponseWrapper(RequestModel requestModel) throws JsonProcessingException {
         Map<String, Object> responseWrapper = requestModel.getResponseWrapper();
-        if (ObjectUtils.isNullOrEmpty(responseWrapper)) {
-            String str = (String) mockInterface.tryAcquireGlobal(requestModel.getFileName(), "response_wrapper");
-            if (ObjectUtils.isNullOrEmpty(str)) {
-                return null;
-            }
-            responseWrapper = objectMapper.readValue(str, new TypeReference<Map<String, Object>>() {});
+        if (ObjectUtils.isNotNullOrEmpty(responseWrapper)) {
+            return responseWrapper;
         }
-        return responseWrapper;
+
+        String str = (String) mockInterface.tryAcquireGlobal(requestModel.getFileName(), MockConstants.MOCK_RESPONSE_WRAPPER);
+        if (ObjectUtils.isNullOrEmpty(str)) {
+            return null;
+        }
+        return objectMapper.readValue(str, new TypeReference<Map<String, Object>>() {});
     }
 
-    private Map<String, Object> resolveResponseBody(HttpServletRequest request,
-                                                    HttpServletResponse response,
-                                                    RequestModel requestModel) {
+    private Map<String, Object> resolveResponseBody(HttpServletRequest request, HttpServletResponse response, RequestModel requestModel) {
         Map<String, Object> responseBody = requestModel.getResponseBody();
         Map<String, Object> responseMap = new HashMap<>(16);
-        responseBody.forEach((key, value) -> {
+        for (Map.Entry<String, Object> entry : responseBody.entrySet()) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
             if (value instanceof String str) {
-                DataTypeEnum dataType = this.getDataType(str);
+                DataTypeEnum dataType = this.convert.getDataType(str);
                 if (Objects.isNull(dataType)) {
                     responseMap.put(key, str);
-                    return;
+                    continue;
                 }
                 if (dataType == DataTypeEnum.REQUEST) {
                     Object obj = this.tryRequestParams(request, requestModel, str);
                     responseMap.put(key, obj);
                 } else {
-                    Object generate = this.tryGenerate(dataType);
-                    if (str.equals("@" + dataType.getValue() + "@")) {
-                        responseMap.put(key, generate);
-                    } else {
-                        String replaced = str.replaceAll("@\\w+@", generate.toString());
-                        responseMap.put(key, replaced);
-                    }
+                    Object object = convert.convert(str);
+                    responseMap.put(key, object);
                 }
             }
             if (value instanceof Map map) {
                 responseMap.put(key, this.resolveResponseBody(request, response, requestModel));
             }
-        });
+        }
         return responseMap;
-    }
-
-    private Object tryGenerate(DataTypeEnum dataTypeEnum) {
-        return switch (dataTypeEnum) {
-            case RANDOM -> RandomUtils.randomNumberAndAlphabet(6);
-            case AGE -> GenerateUtils.AGE.generate();
-            case EMAIL -> GenerateUtils.EMAIL.generate();
-            case MOBILE -> GenerateUtils.MOBILE_PHONE.generate();
-            case NAME -> GenerateUtils.USER_NAME.generate();
-            case ID_CARD -> GenerateUtils.ID_CARD.generate();
-            case ADDRESS -> GenerateUtils.ADDRESS.generate().address();
-            case IP -> GenerateUtils.IP.generate();
-            case TIME -> GenerateUtils.TIME.generate();
-            case TIMESTAMP -> GenerateUtils.TIMESTAMP.generate();
-            case DATE -> GenerateUtils.DATE.generate();
-            case DATETIME -> GenerateUtils.DATETIME.generate();
-            case TIMESTAMP_CURRENT -> System.currentTimeMillis();
-            case NUMBER -> RandomUtils.randomInt();
-            default -> null;
-        };
     }
 
     private Object tryRequestParams(HttpServletRequest request, RequestModel requestModel, String value) {
@@ -237,17 +213,5 @@ public class MockServiceImpl implements MockService {
             String[] split = header.split(":");
             response.addHeader(split[0], split[1]);
         }
-    }
-
-    private DataTypeEnum getDataType(String value) {
-        if (value.startsWith(CommonConstants.SYMBOL_EXPRESSION)) {
-            return DataTypeEnum.REQUEST;
-        }
-        Matcher matcher = this.pattern.matcher(value);
-        if (matcher.find()) {
-            String group = matcher.group(1);
-            return DataTypeEnum.getByValue(group);
-        }
-        return null;
     }
 }
