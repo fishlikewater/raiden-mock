@@ -81,7 +81,7 @@ public class MockServiceImpl implements MockService {
             Map<String, Object> warpperMap = this.tryAcquireResponseWrapper(requestModel);
             String responseCode = requestModel.getResponseCode();
             this.addHeaders(response, requestModel.getResponseHeaders());
-            Map<String, Object> map = this.resolveResponseBody(request, response, requestModel);
+            Map<String, Object> map = this.resolveResponseBody(request, response, requestModel, requestModel.getResponseBody());
             if (ObjectUtils.isNullOrEmpty(warpperMap)) {
                 return Result.of(MockConstants.MOCK_SUCCESS, responseCode, map);
             }
@@ -126,8 +126,7 @@ public class MockServiceImpl implements MockService {
         return objectMapper.readValue(str, new TypeReference<Map<String, Object>>() {});
     }
 
-    private Map<String, Object> resolveResponseBody(HttpServletRequest request, HttpServletResponse response, RequestModel requestModel) {
-        Map<String, Object> responseBody = requestModel.getResponseBody();
+    private Map<String, Object> resolveResponseBody(HttpServletRequest request, HttpServletResponse response, RequestModel requestModel, Map<String, Object> responseBody) {
         Map<String, Object> responseMap = new HashMap<>(16);
         for (Map.Entry<String, Object> entry : responseBody.entrySet()) {
             String key = entry.getKey();
@@ -147,7 +146,7 @@ public class MockServiceImpl implements MockService {
                 }
             }
             if (value instanceof Map map) {
-                responseMap.put(key, this.resolveResponseBody(request, response, requestModel));
+                responseMap.put(key, this.resolveResponseBody(request, response, requestModel, map));
             }
         }
         return responseMap;

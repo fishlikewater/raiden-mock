@@ -36,6 +36,6 @@ public class EmailGenerate implements Generate {
 
     @Override
     public Object generate(String expression) {
-        return GenerateUtils.USER_NAME.generate();
+        return GenerateUtils.EMAIL.generate();
     }
 }
