@@ -78,7 +78,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>io.github.fishlikewater.raiden.mock.RaidenMockApplication</mainClass>
+                            <mainClass>io.github.fishlikewater.raiden.mock.web.RaidenMockApplication</mainClass>
                             <classpathPrefix>lib/</classpathPrefix>
                             <addClasspath>true</addClasspath>
                         </manifest>
