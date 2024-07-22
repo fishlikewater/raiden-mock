@@ -17,20 +17,22 @@
     </modules>
 
     <properties>
+        <java.version>21</java.version>
         <revision>0.0.1-SNAPSHOT</revision>
+        <raiden.version>1.0.4</raiden.version>
         <lombok.version>1.18.30</lombok.version>
         <spring.boot.version>3.3.1</spring.boot.version>
+        <license-maven.version>3.0</license-maven.version>
         <spring.boot.processor.version>3.3.1</spring.boot.processor.version>
-        <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.compilerVersion>21</maven.compiler.compilerVersion>
         <maven.compiler.source.version>21</maven.compiler.source.version>
         <maven.compiler.target.version>21</maven.compiler.target.version>
         <maven-compiler.version>3.12.1</maven-compiler.version>
-        <raiden.version>1.0.4</raiden.version>
+        <maven.build.timestamp.format>yyyy</maven.build.timestamp.format>
     </properties>
 
-    <url>https://github.com/fishlikewater/raiden/tree/master</url>
+    <url>https://github.com/fishlikewater/raiden-mock/tree/master</url>
 
     <licenses>
         <license>
@@ -120,6 +122,62 @@
                             <version>${lombok.version}</version>
                         </path>
                     </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.mycila</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <version>${license-maven.version}</version>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>remove</goal>
+                            <goal>format</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <properties>
+                        <year>${maven.build.timestamp}</year>
+                        <author>zhangxiang</author>
+                        <email>fishlikewater@126.com</email>
+                    </properties>
+                    <inlineHeader>
+                        <![CDATA[
+Copyright (c) ${year} ${author} (${email})
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+]]>
+                    </inlineHeader>
+                    <!--排除文件-->
+                    <excludes>
+                        <exclude>**/resources/**</exclude>
+                        <exclude>**/*.properties</exclude>
+                        <exclude>**/*.yml</exclude>
+                        <exclude>*.sh</exclude>
+                        <exclude>*.yml</exclude>
+                        <exclude>.editorconfig</exclude>
+                        <exclude>.gitignore</exclude>
+                        <exclude>**/*.md</exclude>
+                        <exclude>**/*.xml</exclude>
+                        <exclude>**/raiden/core/Assert.java</exclude>
+                        <exclude>**/references/**/**.java</exclude>
+                    </excludes>
+                    <strictCheck>true</strictCheck>
+                    <mapping>
+                        <java>SLASHSTAR_STYLE</java>
+                    </mapping>
                 </configuration>
             </plugin>
         </plugins>
